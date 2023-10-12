@@ -1,0 +1,68 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "contact": {}
+    },
+    "paths": {
+        "/mesa/{numero}/adicionar-item": {
+            "post": {
+                "description": "Adiciona um item à mesa especificada",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "Tables"
+                ],
+                "summary": "Adicionar item à mesa",
+                "parameters": [
+                    {
+                        "type": "integer",
+                        "description": "Número da mesa",
+                        "name": "numero",
+                        "in": "path",
+                        "required": true
+                    },
+                    {
+                        "description": "Item a ser adicionado",
+                        "name": "item",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/model.Pedido"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/model.Pedido"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "model.Pedido": {
+            "type": "object",
+            "properties": {
+                "hash": {
+                    "type": "string"
+                },
+                "item": {
+                    "type": "string"
+                },
+                "quantidade": {
+                    "type": "integer"
+                },
+                "valor": {
+                    "type": "number"
+                }
+            }
+        }
+    }
+}

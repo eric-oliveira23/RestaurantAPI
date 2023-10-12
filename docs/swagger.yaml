@@ -1,0 +1,43 @@
+definitions:
+  model.Pedido:
+    properties:
+      hash:
+        type: string
+      item:
+        type: string
+      quantidade:
+        type: integer
+      valor:
+        type: number
+    type: object
+info:
+  contact: {}
+paths:
+  /mesa/{numero}/adicionar-item:
+    post:
+      consumes:
+      - application/json
+      description: Adiciona um item à mesa especificada
+      parameters:
+      - description: Número da mesa
+        in: path
+        name: numero
+        required: true
+        type: integer
+      - description: Item a ser adicionado
+        in: body
+        name: item
+        required: true
+        schema:
+          $ref: '#/definitions/model.Pedido'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/model.Pedido'
+      summary: Adicionar item à mesa
+      tags:
+      - Tables
+swagger: "2.0"
