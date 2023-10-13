@@ -2,8 +2,8 @@ package product_handler
 
 import (
 	"context"
+	"encoding/base64"
 	model "endpoint/models"
-	utils "endpoint/utils"
 	"fmt"
 	"net/http"
 	"time"
@@ -36,19 +36,26 @@ func init() {
 
 func AddProduct(c *gin.Context) {
 
-	// Dados do novo pedido a ser adicionado (a partir do corpo da solicitação JSON)
 	var novoPedido model.Pedido
 	if err := c.ShouldBindJSON(&novoPedido); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	randomHash, err := utils.HashGenerator(6)
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+	if novoPedido.Imagem == "" {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "Nenhuma imagem enviada"})
 		return
 	}
-	novoPedido.Hash = randomHash
+
+	// Verifique se a imagem é base64 válida
+	imagemBase64 := novoPedido.Imagem
+	_, err := base64.StdEncoding.DecodeString(imagemBase64)
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "String base64 inválida"})
+		return
+	}
+
+	novoPedido.Imagem = imagemBase64
 
 	fmt.Println("Pedido a ser inserido:", novoPedido)
 

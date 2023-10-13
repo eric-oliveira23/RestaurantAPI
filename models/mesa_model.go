@@ -5,6 +5,7 @@ type Pedido struct {
 	Quantidade int     `json:"quantidade"`
 	Valor      float64 `json:"valor"`
 	Hash       string  `json:"hash" bson:"hash"`
+	Imagem     string  `json:"imagem"`
 }
 
 type Mesa struct {
