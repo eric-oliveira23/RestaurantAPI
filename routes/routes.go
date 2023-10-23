@@ -18,5 +18,6 @@ func SetupRoutes(router *gin.Engine) {
 	// Products
 	router.POST("/cadastrar-produto", product_handlers.AddProduct)
 	router.GET("/produtos", product_handlers.GetAllProducts)
+	router.POST("/remover-produto", product_handlers.DeleteItem)
 
 }

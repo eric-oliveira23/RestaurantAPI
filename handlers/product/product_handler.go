@@ -92,3 +92,26 @@ func GetAllProducts(c *gin.Context) {
 	c.JSON(http.StatusOK, products)
 
 }
+
+func DeleteItem(c *gin.Context) {
+
+	var item model.Pedido
+	if err := c.ShouldBindJSON(&item); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+
+	var filterItem = bson.M{"hash": item.Hash}
+
+	var update = bson.M{
+		"$pull": bson.M{"produtos": filterItem},
+	}
+
+	_, err := collection.UpdateOne(context.TODO(), filterItem, update)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	c.JSON(http.StatusOK, gin.H{"message": "Item removido com sucesso"})
+}

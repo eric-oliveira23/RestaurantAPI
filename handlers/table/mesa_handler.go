@@ -43,50 +43,42 @@ func init() {
 // @Success 200 {object} model.Pedido
 // @Router /mesa/{numero}/adicionar-item [post]
 func AddItem(c *gin.Context) {
-	// Obter o número da mesa dos parâmetros da URL
 	numeroMesa := c.Param("numero")
-
-	// Converter o número da mesa para int
 	numeroMesaInt, err := strconv.Atoi(numeroMesa)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Número de mesa inválido"})
 		return
 	}
 
-	// Dados do novo pedido a ser adicionado (a partir do corpo da solicitação JSON)
-	var novoPedido model.Pedido
+	var novoPedido []model.Pedido
 	if err := c.ShouldBindJSON(&novoPedido); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	// Usar diretamente o valor da estrutura novoPedido.Valor
-	valorFloat := novoPedido.Valor
-
-	// Verificar se a mesa com o número especificado já existe
 	filter := bson.M{"numero": numeroMesaInt}
 	var mesa model.Mesa
+
 	err = collection.FindOne(context.TODO(), filter).Decode(&mesa)
+
+	if err != nil && err != mongo.ErrNoDocuments {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+
+	mesa.Numero = numeroMesaInt
+	mesa.Pedidos = append(mesa.Pedidos, novoPedido...)
+	mesa.Total = calcularTotal(mesa.Pedidos)
+
 	if err == mongo.ErrNoDocuments {
-		// A mesa não existe, então criamos uma nova mesa com o pedido
-		novaMesa := model.Mesa{
-			Numero:  numeroMesaInt,
-			Pedidos: []model.Pedido{novoPedido},
-			Total:   float64(valorFloat),
-		}
-		_, err := collection.InsertOne(context.TODO(), novaMesa)
+		_, err := collection.InsertOne(context.TODO(), mesa)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
-	} else if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
 	} else {
-		// A mesa existe, então adicionamos o pedido à lista de pedidos da mesa
 		update := bson.M{
-			"$push": bson.M{"pedidos": novoPedido},
-			"$inc":  bson.M{"total": float32(novoPedido.Valor)},
+			"$set": bson.M{"pedidos": mesa.Pedidos, "total": mesa.Total},
 		}
 		_, err := collection.UpdateOne(context.TODO(), filter, update)
 		if err != nil {
@@ -96,7 +88,14 @@ func AddItem(c *gin.Context) {
 	}
 
 	c.JSON(http.StatusCreated, gin.H{"message": "Pedido adicionado com sucesso"})
+}
 
+func calcularTotal(pedidos []model.Pedido) float64 {
+	total := 0.0
+	for _, pedido := range pedidos {
+		total += pedido.Valor
+	}
+	return total
 }
 
 func ListTables(c *gin.Context) {
@@ -186,28 +185,25 @@ func RemoveItems(c *gin.Context) {
 			"$inc":  bson.M{"total": -item.Valor},
 		}
 
-		// Remova a mesa se não houver mais pedidos nela
-		if len(mesa.Pedidos) == 1 {
-			_, err := collection.DeleteOne(context.TODO(), filter)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
-			c.JSON(http.StatusOK, gin.H{"message": "Mesa removida, pois não há mais pedidos"})
-			return
-		}
-
 		_, err := collection.UpdateOne(context.TODO(), filter, update)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 
-		_, err = collection.UpdateOne(context.TODO(), filter, update)
+	}
+
+	collection.FindOne(context.TODO(), filter).Decode(&mesa)
+
+	// Remova a mesa se não houver mais pedidos nela
+	if len(mesa.Pedidos) == 0 {
+		_, err := collection.DeleteOne(context.TODO(), filter)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
+		c.JSON(http.StatusOK, gin.H{"message": "Mesa removida, pois não há mais pedidos"})
+		return
 	}
 
 	c.JSON(http.StatusOK, gin.H{"message": "Itens removidos com sucesso"})
